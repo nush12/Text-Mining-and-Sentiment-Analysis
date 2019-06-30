@@ -5,7 +5,6 @@ date: "March 22, 2019"
 output: 
   html_document:
      keep_md: true
-     code_folding: hide
      theme: lumen
 ---
 
@@ -13,10 +12,10 @@ output:
 
 
 
-## Text Mining and Sentiment Analysis of English  Song Lyrics{.tabset .tabset-fade}
+## Text Mining and Sentiment Analysis of English  Song Lyrics
 
 
-### Introduction {.tabset .tabset-fade .tabset-pills}
+### Introduction 
 
 
 *****************************************************************
@@ -80,7 +79,7 @@ Following are the packages required to analyse the given datasets:
  
 ******************************************************************
 
-### Analysis {.tabset .tabset-fade .tabset-pills}
+### Analysis  
 
 
 **Analysis**
