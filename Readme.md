@@ -1,7 +1,5 @@
 ---
-title: "Capital One Data Challenge"
 author: "Anusha Chintakunta Manjunatha"
-date: "March 22, 2019"
 output: 
   html_document:
      keep_md: true
