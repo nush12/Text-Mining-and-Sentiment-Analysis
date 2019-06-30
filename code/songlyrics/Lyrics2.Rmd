@@ -1,0 +1,356 @@
+---
+title: "Lyrics"
+author: "Ashish Gyanchandani and Anusha Chintakunta"
+date: "February 19, 2018"
+output: 
+   html_document:
+    code_folding: hide
+    theme: cerulean
+    highlight: tango
+---
+
+```{r message=FALSE, warning=FALSE, echo = FALSE}
+
+library(readr)
+library(dplyr)
+library(tidyr)
+library(widyr)
+library(RWeka)
+library(tm)
+library(qdap)
+library(stringr)
+library(quanteda)
+library(wordcloud)
+library(wordcloud2)
+library(SnowballC)
+library(tidytext)
+library(ggraph)
+library(igraph)
+
+```
+
+## Songs Lyrics{.tabset .tabset-fade}
+
+
+### Introduction {.tabset .tabset-fade .tabset-pills}
+
+
+
+**Brief Description**
+
+
+******************************************************************
+
+The data has been acquired from Kaggle. There was some amount of cleaning already done on the data in the form of removing inconvenient data like removing non-English lyrics, extremely short, extremely long lyrics and lyrics with non-ASCII symbols. The original data contains lyrics for 57650 songs. But, we decided to stick with only a sample of the data to avoid getting the computational efficiency. 
+
+
+*********************************
+
+**Problem Statement**
+
+***************
+
+
+
+*********************************
+
+
+**Approach**
+
+***************
+
+Before we begin with our analysis, it is always important to have a look at the data and get a feel of it. So, I'll be starting with looking at the structure of the data after importing the required datasets in R. Looking at the data helps you see what is wrong with the data and the methods that need to be applied to clean the data. Cleaning the data is an essential part of coming up with meaningful insights and can consume up to 60% of the time and effort. Beginning with the analysis without cleaning the data can have negative consequenses which can lead to undesired results and not so meaningful conclusion. Once the data is cleaned, we will move on to the exploratory data analysis and apply different machine learning techniques to generate some meaningful conclusions.
+
+The analysis will try to answer the questions posed in the problem statement so that the stakeholders who are going to use the use this analysis can target the consumers in a right way to increase the sales of the company.
+
+********************************************************************
+
+
+**Packages Required**
+
+
+******************************************************************
+
+Following are the packages required to analyse the given datasets:
+
+
+* `readr` - It provides a fast and friendly way to read rectangular (csv, tsv) data 
+* `dplyr` - dplyr provides verbs that helps in data manipulation of objects like data frame
+* `tidyr` - It is designed specifically for data tidying and works well with 'dplyr' data pipeline
+* `stringr` - It is used for character manipulation, pattern matching in strings, etc.
+* `RWeka` - 
+* `tm` - A framework for text mining applications within R.
+* `plotly` - plotly is used for creating interactive webpages in R
+* `qdap` - package designed to assist in quantitative discourse analysis
+* `SnowballC` - for word stemming
+* `widyr` -  package wraps the pattern of un-tidying data into a wide matrix
+* `quanteda` - Provides functionality for corpus management,creating and 
+               manipulating tokens and ngrams
+* `knitr` - knitr is used for dynamic report generation
+* `wordcloud` - To create a frequent wordcloud
+* `tidytext` - create texts in a tidy format
+* `ggraph` - to create graphs 
+* `igraph` - to handle large graphs, with millions of vertices and edges
+
+
+**Data Description**
+
+
+******************************************************************
+
+ The dataset contains 4 variables:
+
+**Variables and their description**
+
+* `ARTIST` - Name of the artist 
+* `SONG` - Name of the song
+* `LINK` - It is a link to a webpage containing the song
+* `LYRICS` - It is the lyrics of the song identified in the song column
+
+
+******************************************************************
+
+### Data Cleaning and Analysis {.tabset .tabset-fade .tabset-pills}
+
+
+**Data Cleaning and Analysis**
+
+
+******************************************************************
+
+
+
+```{r message=FALSE, warning=FALSE}
+
+songs <- read_csv("songdata.csv")
+head(songs)
+glimpse(songs)
+
+
+
+
+
+
+
+doc_id <- seq(1,57650, by = 1)
+
+songs_data <- songs %>% 
+  mutate(doc_id = doc_id) %>%
+  select(doc_id,text,artist,song,link)
+
+sample_split <- round(nrow(songs_data) * 0.1)
+
+sample_index <- sample(nrow(songs_data)) 
+songs_data <- songs_data[sample_index, ]
+
+sample_songs <- songs_data[1:sample_split,]
+
+songs_source <- DataframeSource(sample_songs)
+songs_corpus <- VCorpus(songs_source)
+
+
+#head(meta(songs_corpus))
+#content(songs_corpus[[2]])
+
+#class(songs_corpus[[2]])
+#class(songs_corpus)
+
+songs_corpus <- tm_map(songs_corpus, removePunctuation)
+songs_corpus <- tm_map(songs_corpus, content_transformer(tolower))
+songs_corpus <- tm_map(songs_corpus, removeWords, c(stopwords("en"),"dont",
+                "can","just", "cant", "get", "got"))
+songs_corpus <- tm_map(songs_corpus, content_transformer(replace_number))
+songs_corpus <- tm_map(songs_corpus, content_transformer(bracketX))
+songs_corpus <- tm_map(songs_corpus, stripWhitespace)
+
+#songs_list <- tm_map(songs_corpus, content_transformer(strsplit) , " ")
+#songs_char <- tm_map(songs_list, unlist)
+
+
+
+clean_corpus <- tm_map(songs_corpus, stemDocument)
+
+#clean_corpus <- stemCompletion(clean_corpus, clean_corpus)
+
+clean_tdm <- TermDocumentMatrix(clean_corpus)
+#weighted_tdm <- TermDocumentMatrix(clean_corpus,
+#                      control = list(weighting = weightTfIdf))
+
+clean_m <- as.matrix(clean_tdm)
+#clean_m <- as.matrix(weighted_tdm)
+
+
+frequency_artist <- freq_terms(
+  sample_songs$artist, top = 10, at.least = 3, stopwords =
+    stopwords("english")
+)
+
+frequency_words <- freq_terms(
+  sample_songs$text, top = 10, at.least = 3, stopwords = c(stopwords("english"),
+       "dont", "can", "get", "got")                                                
+)
+
+plot(frequency_words)
+plot(frequency_artist)
+
+term_frequency <- rowSums(clean_m)
+term_frequency <- sort(term_frequency, decreasing = TRUE)
+term_frequency[1:10]
+
+barplot(term_frequency[1:10], col = "tan", las = 2)
+
+data.frame(names(term_frequency), term_frequency) %>%
+  arrange(desc(term_frequency)) %>%
+  top_n(500) %>%
+  wordcloud2(figPath = "songlyrics/music_note.png", size = 0.25, color = "black") 
+
+
+#word_associate(sample_songs$text, match.string = "virus",
+#               stopwords = c(stopwords("english"),
+#                             "dont", "can", "get", "got",
+ #                            "cant", "just") ,
+  #             network.plot = TRUE, 
+   #            cloud.colors = c("grey85", "tomato"))
+
+#tokenizer <- function(x){
+#  NGramTokenizer(x, Weka_control(min=2, max = 2))
+#}
+
+#bigram_tdm <- TermDocumentMatrix(
+#  songs_corpus, 
+#  control = list(tokenize = tokenizer)
+#)
+
+#songs_corpus
+#clean_tdm
+#bigram_matrix <- as.matrix(bigram_tdm)
+
+top100_artist <- sample_songs %>%
+  group_by(artist) %>%
+  summarise(total = length(song)) %>%
+  arrange(desc(total)) %>%
+  top_n(100)
+  
+  wordcloud(as.character(top100_artist$artist),
+            as.numeric(top100_artist$total),
+            rot.per=0.35, scale = c(1.1,0.1), 
+            colors = c("grey80", "darkgoldenrod1",
+                       "tomato") )
+
+nrc <- get_sentiments("nrc")
+temp_table <- data.frame(word = names(term_frequency), 
+             word_count = term_frequency)%>% 
+             inner_join(nrc)
+
+unique((temp_table$sentiment))
+
+#temp_table %>% 
+#  filter( sentiment == "joy") %>% 
+ #   head(10) %>% 
+#  mutate(word = reorder(word,word_count)) %>%
+ # ggplot(aes(x = word, 
+  #           y = word_count)) +
+#  geom_col(fill = "paleturquoise4") +
+#  coord_flip() + 
+#  theme_bw() 
+  
+  
+#temp_table %>% 
+ # filter( sentiment == "sadness") %>% 
+  #head(10) %>% 
+#  mutate(word = reorder(word,word_count)) %>%
+#  ggplot(aes(x = word, 
+ #            y = word_count)) +
+#  geom_col(fill = "dimgrey") +
+#  coord_flip() + 
+ # theme_bw() 
+
+
+temp_table %>% 
+  group_by(sentiment) %>%
+  top_n(10, word_count) %>%
+  ungroup() %>%
+  mutate(word = reorder(word,word_count)) %>%
+  ggplot(aes(x = word, 
+             y = word_count, fill = sentiment)) +
+  geom_col() +
+  facet_wrap(~sentiment, scales = "free")+
+  coord_flip() +
+  theme(axis.text.y = element_text(size = 7), 
+        axis.text.x = element_text(size = 5)) 
+  
+
+unnest_tidy <- sample_songs %>%
+  unnest_tokens(word, text) %>%
+  anti_join(stop_words)
+
+  
+positive_song <- unnest_tidy %>% 
+  inner_join(get_sentiments("bing")) %>%
+  group_by(song, sentiment) %>%
+  summarize(score = n()) %>%
+  spread(sentiment, score) %>% 
+  mutate_at(vars(negative:positive), funs(replace_na(., 1))) %>%
+  ungroup()%>%
+  mutate(positiveratio = positive/negative, 
+         song = reorder(song,positiveratio))
+
+negative_song <- unnest_tidy %>% 
+  inner_join(get_sentiments("bing")) %>%
+  group_by(song, sentiment) %>%
+  summarize(score = n()) %>%
+  spread(sentiment, score) %>% 
+  mutate_at(vars(negative:positive), funs(replace_na(., 1))) %>%
+  ungroup()%>%
+  mutate(negativeratio = negative/positive,
+         song = reorder(song,negativeratio))
+
+
+  ggplot(top_n(positive_song, 30),aes(x = song, y = positiveratio)) +
+    geom_point(color="green4") +
+    coord_flip() +
+    theme_bw() +
+    theme(axis.text.y = element_text(size = 7)) 
+   
+  ggplot(top_n(negative_song, 30),aes(x = song, y = negativeratio)) +
+    geom_point(color="tomato") +
+    coord_flip() +
+    theme_bw() +
+    theme(axis.text.y = element_text(size = 7))  
+  
+
+#  summarise(num_words = n()) %>%
+#  arrange(desc(num_words)) 
+
+
+
+  section_U2<-songs%>%filter(artist=='The Killers')%>%mutate(section = row_number() %/% 10) %>%
+    filter(section >= 0) %>%
+    unnest_tokens(word, text) %>%
+    filter(!word %in% stop_words$word) %>%
+    filter(nchar(word) > 4)
+head(section_U2)
+
+
+lyric_pair<-section_U2%>%pairwise_count(word,section,sort=TRUE)
+head(lyric_pair)
+
+word_corr<- section_U2 %>%group_by(word) %>%
+  filter(n() >= 11) %>%
+  pairwise_cor(word, section, sort = TRUE)
+head(word_corr, 30)
+
+
+word_corr %>%
+  filter(correlation > 0.75) %>%
+  graph_from_data_frame() %>%
+  ggraph(layout = "kk") +
+  geom_edge_link(aes(edge_alpha = correlation), show.legend = FALSE) +
+  geom_node_point(color = "blue", size = 5) +
+  geom_node_text(aes(label = name), repel = TRUE) +
+  theme_void()
+
+
+```
+
+
