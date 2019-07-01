@@ -75,4 +75,4 @@ Following are the packages required to analyse the given datasets:
 
 
  
-Please refer to 
+Please refer to http://rpubs.com/Nush12/textmining for more details
